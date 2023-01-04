@@ -23,13 +23,14 @@ import "container/list"
 type Cache struct {
 	// MaxEntries is the maximum number of cache entries before
 	// an item is evicted. Zero means no limit.
-	MaxEntries int
+	MaxEntries int // 缓存的最大容量，缓存的数量超出该值，将会被删除
 
 	// OnEvicted optionally specifies a callback function to be
 	// executed when an entry is purged from the cache.
+	// 设置删除元素时的回调
 	OnEvicted func(key Key, value interface{})
 
-	ll    *list.List
+	ll    *list.List // 存放所有的元素，当新增元素时，就放到链表的开头
 	cache map[interface{}]*list.Element
 }
 
@@ -93,6 +94,7 @@ func (c *Cache) Remove(key Key) {
 }
 
 // RemoveOldest removes the oldest item from the cache.
+// 从 Cache 里面删除最久的元素
 func (c *Cache) RemoveOldest() {
 	if c.cache == nil {
 		return

@@ -26,6 +26,7 @@ import (
 //
 // Implementation of Getter must call exactly one of the Set methods
 // on success.
+// 获取的数据可以用来填充 dest，其是一个 Sink 接口类型的参数
 type Sink interface {
 	// SetString sets the value to s.
 	SetString(s string) error

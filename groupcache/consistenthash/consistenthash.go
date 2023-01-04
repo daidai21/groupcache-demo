@@ -26,10 +26,10 @@ import (
 type Hash func(data []byte) uint32
 
 type Map struct {
-	hash     Hash
-	replicas int
-	keys     []int // Sorted
-	hashMap  map[int]string
+	hash     Hash           // 具体使用的哈希函数
+	replicas int            // 哈希环中虚拟节点的个数
+	keys     []int          // Sorted // 所有的key哈希后的32位整数的集合，经过了排序
+	hashMap  map[int]string // hashMap就是存放具体的对应，将key对应上hash后的32位整数
 }
 
 func New(replicas int, fn Hash) *Map {

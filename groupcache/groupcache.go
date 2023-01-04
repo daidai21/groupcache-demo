@@ -55,6 +55,7 @@ func (f GetterFunc) Get(ctx context.Context, key string, dest Sink) error {
 	return f(ctx, key, dest)
 }
 
+// 全局变量
 var (
 	mu     sync.RWMutex
 	groups = make(map[string]*Group)
@@ -141,16 +142,16 @@ func callInitPeerServer() {
 // a group of 1 or more machines.
 type Group struct {
 	name       string
-	getter     Getter
-	peersOnce  sync.Once
-	peers      PeerPicker
-	cacheBytes int64 // limit for sum of mainCache and hotCache size
+	getter     Getter     // 从 Group 中获取数据的接口实现
+	peersOnce  sync.Once  // peersOnce 用于单次初始化集群中节点的函数
+	peers      PeerPicker // peers 用于判断查找的 key 是否属于当前节点。如果当前 key 属于当前节点，那么返回 nil 和 false，如果不属于当前节点，那么返回 true
+	cacheBytes int64      // limit for sum of mainCache and hotCache size // 单个 Group 能够缓存的键的数目
 
 	// mainCache is a cache of the keys for which this process
 	// (amongst its peers) is authoritative. That is, this cache
 	// contains keys which consistent hash on to this process's
 	// peer number.
-	mainCache cache
+	mainCache cache // 当前节点中所有缓存的键值数据
 
 	// hotCache contains keys/values for which this peer is not
 	// authoritative (otherwise they would be in mainCache), but
@@ -160,17 +161,17 @@ type Group struct {
 	// network card could become the bottleneck on a popular key.
 	// This cache is used sparingly to maximize the total number
 	// of key/value pairs that can be stored globally.
-	hotCache cache
+	hotCache cache // 存储了不属于当前节点，但是比较热的数据，以防止每次热数据都要从别的节点获取，需要占用网络资源，影响效率
 
 	// loadGroup ensures that each key is only fetched once
 	// (either locally or remotely), regardless of the number of
 	// concurrent callers.
-	loadGroup flightGroup
+	loadGroup flightGroup // 用于保证每一个键都只会被加载一次
 
 	_ int32 // force Stats to be 8-byte aligned on 32-bit platforms
 
 	// Stats are statistics on the group.
-	Stats Stats
+	Stats Stats // 对 Group 的统计
 }
 
 // flightGroup is defined as an interface which flightgroup.Group
@@ -321,6 +322,7 @@ func (g *Group) getFromPeer(ctx context.Context, peer ProtoGetter, key string) (
 	return value, nil
 }
 
+// 先查本地缓存，再查其他机器的缓存
 func (g *Group) lookupCache(key string) (value ByteView, ok bool) {
 	if g.cacheBytes <= 0 {
 		return
@@ -387,6 +389,7 @@ func (g *Group) CacheStats(which CacheType) CacheStats {
 // cache is a wrapper around an *lru.Cache that adds synchronization,
 // makes values always be ByteView, and counts the size of all keys and
 // values.
+// 可以看到，其实 cache 类型就是对 lru.Cache 的封装，也可以说是线程安全的 Cache，并且提供了一些线程安全的 get 和 add 方法以及删除的方法，具体代码如下：
 type cache struct {
 	mu         sync.RWMutex
 	nbytes     int64 // of all keys and values
@@ -466,6 +469,7 @@ func (c *cache) itemsLocked() int64 {
 }
 
 // An AtomicInt is an int64 to be accessed atomically.
+// 支持原子并发操作
 type AtomicInt int64
 
 // Add atomically adds n to i.
